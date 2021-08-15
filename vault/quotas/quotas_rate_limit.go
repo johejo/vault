@@ -1,6 +1,7 @@
 package quotas
 
 import (
+	"context"
 	"encoding/hex"
 	"fmt"
 	"math"
@@ -300,7 +301,10 @@ func (rlq *RateLimitQuota) allow(req *Request) (Response, error) {
 		}
 	}
 
-	limit, remaining, reset, allow := rlq.store.Take(req.ClientAddress)
+	limit, remaining, reset, allow, err := rlq.store.Take(context.Background(), req.ClientAddress)
+	if err != nil {
+		return resp, err
+	}
 	resp.Allowed = allow
 	resp.Headers[httplimit.HeaderRateLimitLimit] = strconv.FormatUint(limit, 10)
 	resp.Headers[httplimit.HeaderRateLimitRemaining] = strconv.FormatUint(remaining, 10)
@@ -326,7 +330,7 @@ func (rlq *RateLimitQuota) close() error {
 	}
 
 	if rlq.store != nil {
-		return rlq.store.Close()
+		return rlq.store.Close(context.Background())
 	}
 
 	return nil
